@@ -143,31 +143,7 @@ const Login = () => {
           </Typography>
 
           <Box component="form" onSubmit={handleSubmit}>
-            <TextField
-              margin="normal"
-              fullWidth
-              type="email"
-              label="Correo electrónico"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <TextField
-              margin="normal"
-              fullWidth
-              label="Alias"
-              value={alias}
-              onChange={(e) => setAlias(e.target.value)}
-              required
-            />
-            <TextField
-              margin="normal"
-              fullWidth
-              label="Código"
-              value={codigo}
-              onChange={(e) => setCodigo(e.target.value)}
-              required
-            />
+            
 
             <Button
               type="submit"
