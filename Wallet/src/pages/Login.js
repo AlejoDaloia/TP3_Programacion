@@ -11,6 +11,13 @@ import {
   Snackbar,
   Alert,
 } from '@mui/material';
+/*import {
+    loginWithRedirect,
+    isAuthenticated,
+    user,
+    getAccessTokenSilently,
+    getIdTokenClaims,
+} from '@auth0/auth0-react';*/
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 
