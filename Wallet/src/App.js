@@ -1,6 +1,4 @@
 import './App.css';
-import LoginButton from './pages/LoginButton';
-import Profile from './pages/Profile';
 import { ConfigProvider } from 'antd';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
@@ -15,8 +13,6 @@ import RegenerateTotp from './pages/RegenerateTotp';
 function App() {
   return (
     <>
-      <LoginButton />
-      <Profile />
       <ConfigProvider
       theme={{
         token: {

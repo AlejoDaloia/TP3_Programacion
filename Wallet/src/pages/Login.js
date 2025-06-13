@@ -1,31 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../pageStyles/Login.css';
 import {
   Box,
-  TextField,
   Button,
   Typography,
-  Link as MuiLink,
   CircularProgress,
   Paper,
   Snackbar,
   Alert,
 } from '@mui/material';
-/*import {
-    loginWithRedirect,
-    isAuthenticated,
-    user,
-    getAccessTokenSilently,
-    getIdTokenClaims,
-} from '@auth0/auth0-react';*/
-import { useNavigate, Link } from 'react-router-dom';
+import {
+    useAuth0,
+} from '@auth0/auth0-react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [alias, setAlias] = useState('');
-  const [codigo, setCodigo] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -33,53 +24,98 @@ const Login = () => {
   });
 
   const navigate = useNavigate();
-
-  const showSnackbar = (message, severity = 'info') => {
-    setSnackbar({ open: true, message, severity });
-  };
-
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  //Definicion de dependencias de Auth0
+  const { 
+    isAuthenticated,
+    user,
+    getAccessTokenSilently,
+    getIdTokenClaims,
+    loginWithRedirect,
+  } = useAuth0();
 
-    const data = {
-      username: alias,
-      totpToken: codigo,
-    };
-
+  //Llamada al endpoint de autenticación
+  const auth0Authenticate = async (data) => {
     try {
-      const response = await axios.post('https://raulocoin.onrender.com/api/user-details', data);
-      const res = response.data;
+      const res = await axios.post(`https://raulocoin.onrender.com/api/auth0/authenticate`, data)
+      return res.data;
+    } catch {
+      console.log("Error en la autenticación");
+      return null;
+    }
+  };
 
-      if (res.success && res.user && res.user.email === email) {
+  //Funcion de login
+  const handleLoginClick = () => {
+    loginWithRedirect({
+    authorizationParams: {
+      prompt: 'login',
+    },
+    });
+  };
+
+  useEffect(() => {
+    const fetchTokens = async () => {
+      try {
+        if (!isAuthenticated || !user) return;
+
+        const accessToken = await getAccessTokenSilently();
+        const idTokenClaims = await getIdTokenClaims();
+
+        const data = {
+          auth0_payload: {
+            iss: idTokenClaims.iss,
+            sub: idTokenClaims.sub,
+            aud: idTokenClaims.aud,
+            iat: idTokenClaims.iat,
+            exp: idTokenClaims.exp,
+            email: user.email,
+            name: user.name,
+          },
+          auth0_tokens: {
+            access_token: accessToken,
+            id_token: idTokenClaims.__raw,
+          },
+        };
+
+        const res = await auth0Authenticate(data);
+        if (!res) {
+          setSnackbar({
+            open: true,
+            message: 'No se pudo autenticar. Por favor, intentá más tarde.',
+            severity: 'error',
+          });
+          return;
+        }
+
         localStorage.setItem('userData', JSON.stringify({
           name: res.user.name,
           username: res.user.username,
+          email: res.user.email,
           balance: res.user.balance,
-          token: data.totpToken,
+          isVerified: res.user.isVerified,
+          totpVerified: res.user.totpVerified,
+          needsTotpSetup: res.needsTotpSetup,
+          existingUser: res.existingUser
         }));
+
         navigate('/account');
-      } else {
-        showSnackbar('Verifique las credenciales', 'error');
+      } catch (error) {
+        console.error("Error en el login:", error);
+        setSnackbar({
+          open: true,
+          message: 'Error inesperado al iniciar sesión.',
+          severity: 'error',
+        });
       }
-    } catch (error) {
-      if (
-        error.response &&
-        error.response.status === 403 &&
-        error.response.data.message === "Debes completar la verificación TOTP para acceder a los detalles del usuario"
-      ) {
-        navigate('/verify-account', { state: { alias } });
-      } else {
-        showSnackbar('Verifique las credenciales', 'error');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    fetchTokens();
+  }, [isAuthenticated, navigate, getAccessTokenSilently, getIdTokenClaims, user]);
+
 
   return (
     <Box
@@ -142,32 +178,38 @@ const Login = () => {
             ¡Bienvenido de nuevo, te hemos echado de menos!
           </Typography>
 
-          <Box component="form" onSubmit={handleSubmit}>
-            
+          <Box component="form">
+            <Box textAlign="center" sx={{ mt: 1 }}>
 
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{
+              {/*Boton de login*/}
+              <Button 
+                fullWidth
+                variant="contained"
+                sx={{
+                  mt: 2,
+                  bgcolor: '#C62368',
+                  '&:hover': { bgcolor: '#A31C55' },
+                }} 
+                className="auth0-button" 
+                onClick={handleLoginClick}
+              >
+                Ingresar
+              </Button>
+
+              {/*Boton de recuperación*/}
+              <Button
+               fullWidth
+                variant="contained"
+                sx={{
                 mt: 2,
                 bgcolor: '#C62368',
                 '&:hover': { bgcolor: '#A31C55' },
-              }}
-              disabled={loading}
-            >
-              {loading ? <CircularProgress size={24} color="inherit" /> : 'Ingresar'}
-            </Button>
+                }}
+                disabled={loading}
+               >
+                {loading ? <CircularProgress size={24} color="inherit" /> : 'Recuperar TOTP'}
+              </Button>
 
-            <Box textAlign="center" sx={{ mt: 2 }}>
-              <MuiLink component={Link} to="/register" underline="hover" color="#C62368">
-                Crear nueva cuenta
-              </MuiLink>
-            </Box>
-            <Box textAlign="center" sx={{ mt: 1 }}>
-              <MuiLink component={Link} to="/regenerate-totp" underline="hover" color="#C62368">
-                Ya no tengo mi código
-              </MuiLink>
             </Box>
           </Box>
         </Paper>
