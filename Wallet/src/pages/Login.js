@@ -4,7 +4,7 @@ import {
   Box,
   Button,
   Typography,
-  Link,         // <-- cambio acá
+  Link,  
   Paper,
   Snackbar,
   Alert,
@@ -136,7 +136,19 @@ const Login = () => {
         }
       } else if (res.user.totpVerified && res.user.isVerified) {
         // Usuario ya verificado y TOTP confirmado
-        navigate('/account');
+        const getBalance = await axios.post('https://raulocoin.onrender.com/api/auth0/balance', { email: res.user.email });
+        const userRes = getBalance.data;
+        if (userRes.success && userRes.user) {
+          localStorage.setItem('userData', JSON.stringify({
+            name: userRes.user.name,
+            username: userRes.user.username,
+            balance: userRes.user.balance,
+            email: userRes.user.email,
+          }));
+          navigate('/account');
+        } else {
+          setSnackbar({ open: true, message: 'No se pudieron obtener los datos del usuario.', severity: 'error' });
+        }
       } else {
         // Usuario sin TOTP que debe verificar cuenta
         navigate('/verify-account', {

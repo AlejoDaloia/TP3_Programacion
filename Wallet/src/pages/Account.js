@@ -1,44 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import {
   Box, Typography, IconButton, Button, CircularProgress, Paper,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField
 } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth0 } from '@auth0/auth0-react';
 
 const Account = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [userData, setUserData] = useState(null);
+  const [userData] = useState(() => JSON.parse(localStorage.getItem('userData')));
   const [movimientos, setMovimientos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showTotpPrompt, setShowTotpPrompt] = useState(false);
-  const [tempToken, setTempToken] = useState('');
-
-  useEffect(() => {
-    const savedData = JSON.parse(localStorage.getItem('userData'));
-    if (!savedData) return navigate('/');
-
-    if (location.state?.clearToken) {
-      delete savedData.token;
-      localStorage.setItem('userData', JSON.stringify(savedData));
-    }
-
-    if (!savedData.token) setShowTotpPrompt(true);
-
-    setUserData(savedData);
-  }, [navigate, location.state?.reload, location.state?.clearToken]);
+  const { logout } = useAuth0(); 
 
   useEffect(() => {
     const fetchMovimientos = async () => {
       if (!userData) return;
       setLoading(true);
       try {
-        const { username, token } = userData;
-        const res = await axios.post('https://raulocoin.onrender.com/api/transactions', {
-          username,
-          totpToken: token,
+        const { email } = userData;
+        const res = await axios.post('https://raulocoin.onrender.com/api/auth0/transactions', {
+          email
         });
         setMovimientos(res.data.transactions || []);
       } catch (error) {
@@ -52,9 +36,9 @@ const Account = () => {
     fetchMovimientos();
   }, [userData, location.state?.reload]);
 
-  const handleLogout = () => {
+  const HandleLogout = () => {
     localStorage.removeItem('userData');
-    navigate('/');
+    logout({ returnTo: window.location.origin });
   };
 
   const handleTransfer = () => navigate('/transfer');
@@ -64,6 +48,11 @@ const Account = () => {
     received: 'TRANSFERENCIA RECIBIDA',
     award: 'TRANSFERENCIA RECIBIDA',
   };
+
+  const movimientosFiltrados = movimientos
+    .filter(m => ['sent', 'received', 'award'].includes(m.type))
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, 3);
 
   if (!userData) return null;
 
@@ -139,7 +128,7 @@ const Account = () => {
       >
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Typography variant="h6" color="white">Hola, {userData.name}</Typography>
-          <IconButton onClick={handleLogout} sx={{ color: 'white' }}>
+          <IconButton onClick={HandleLogout} sx={{ color: 'white' }}>
             <LogoutIcon />
           </IconButton>
         </Box>
@@ -158,7 +147,7 @@ const Account = () => {
         </Button>
 
         <Typography variant="h6" color="white">
-          Historial de Movimientos
+          Últimos movimientos
         </Typography>
 
         <Box
@@ -173,10 +162,10 @@ const Account = () => {
         >
           {loading ? (
             <Box display="flex" justifyContent="center"><CircularProgress color="inherit" /></Box>
-          ) : movimientos.length === 0 ? (
+          ) : movimientosFiltrados.length === 0 ? (
             <Typography color="white">No hay movimientos disponibles.</Typography>
           ) : (
-            movimientos.map((mov, i) => (
+            movimientosFiltrados.map((mov, i) => (
               <Paper key={i} elevation={3} sx={{
                 p: 2,
                 borderLeft: '25px solid',
@@ -200,51 +189,6 @@ const Account = () => {
           )}
         </Box>
       </Box>
-
-      <Dialog open={showTotpPrompt}>
-        <DialogTitle>Por favor ingrese su token</DialogTitle>
-        <DialogContent>
-          <TextField
-            type="text"
-            fullWidth
-            value={tempToken}
-            onChange={(e) => setTempToken(e.target.value)}
-            inputProps={{ maxLength: 6 }}
-            autoFocus
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button
-            sx={{ color: '#032340' }}
-            onClick={() => {
-              navigate('/');
-              localStorage.removeItem('userData');
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            sx={{
-              bgcolor: '#A61F43',
-              '&:hover': { bgcolor: '#7e1833' },
-              color: 'white',
-            }}
-            onClick={() => {
-              if (tempToken.length === 6) {
-                const updatedData = { ...userData, token: tempToken };
-                localStorage.setItem('userData', JSON.stringify(updatedData));
-                setUserData(updatedData);
-                setShowTotpPrompt(false);
-              } else {
-                setShowTotpPrompt(true);
-              }
-            }}
-          >
-            Confirmar
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };
