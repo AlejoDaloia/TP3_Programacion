@@ -106,17 +106,25 @@ const Totp = () => {
             {totpSetup.manualSetupCode}
           </Typography>
 
-          <Button
-            variant="contained"
-            onClick={() => navigate('/')}
-            sx={{
-              mt: 3,
-              bgcolor: '#C62368',
-              '&:hover': { bgcolor: '#A31C55' },
-            }}
-          >
-            Ingresar
-          </Button>
+        <Button
+          variant="contained"
+          onClick={() =>
+            navigate('/verify-account', {
+              state: {
+                email: location.state?.email || '',
+                username: location.state?.username || ''
+              }
+            })
+          }
+          sx={{
+            mt: 3,
+            bgcolor: '#C62368',
+            '&:hover': { bgcolor: '#A31C55' },
+          }}
+        >
+          Ingresar
+        </Button>
+
         </Paper>
       </Box>
 

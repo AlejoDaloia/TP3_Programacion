@@ -8,9 +8,8 @@ import {
   Paper,
   Snackbar,
   Alert,
-  Link as MuiLink,
 } from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
+import {  useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const RegenerateTotp = () => {
@@ -147,11 +146,7 @@ const RegenerateTotp = () => {
                 >
                   {loading ? <CircularProgress size={24} color="inherit" /> : 'Regenerar'}
                 </Button>
-                <Box textAlign="center" sx={{ mt: 2 }}>
-                  <MuiLink component={Link} to="/" underline="hover" color="#C62368">
-                    Volver
-                  </MuiLink>
-                </Box>
+
               </Box>
             </>
           ) : (
@@ -185,17 +180,17 @@ const RegenerateTotp = () => {
                 {totpSetup.manualSetupCode}
               </Typography>
 
-              <Button
-                variant="contained"
-                onClick={() => navigate('/')}
-                sx={{
-                  mt: 3,
-                  bgcolor: '#C62368',
-                  '&:hover': { bgcolor: '#A31C55' },
-                }}
-              >
-                Volver
-              </Button>
+            <Button
+              variant="contained"
+              onClick={() => navigate('/verify-account', { state: { email, username: alias } })}
+              sx={{
+                mt: 3,
+                bgcolor: '#C62368',
+                '&:hover': { bgcolor: '#A31C55' },
+              }}
+            >
+              Volver
+            </Button>
             </>
           )}
         </Paper>

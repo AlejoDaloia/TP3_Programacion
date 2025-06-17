@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -15,13 +15,28 @@ import axios from 'axios';
 
 const VerifyAccount = () => {
   const location = useLocation();
-  const [alias] = useState(location.state?.alias || '');
+  const [alias, setAlias] = useState(location.state?.username || '');
+  const [email] = useState(() => {
+    return location.state?.email || localStorage.getItem('userEmail') || '';
+  });
   const [codigo, setCodigo] = useState('');
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
 
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (!email) {
+      setSnackbar({
+        open: true,
+        message: 'No se detectó el email del usuario. Redirigiendo...',
+        severity: 'error',
+      });
+      setTimeout(() => navigate('/'), 3000);
+    }
+  }, [email, navigate]);
+
+  console.log("Alias:", alias);
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -31,12 +46,18 @@ const VerifyAccount = () => {
       totpToken: codigo,
     };
 
+    if (!codigo || !alias) {
+      setSnackbar({ open: true, message: 'Completá todos los campos.', severity: 'warning' });
+      setLoading(false);
+      return;
+    }
+
     try {
       const verifyResponse = await axios.post('https://raulocoin.onrender.com/api/verify-totp-setup', data);
       const verifyRes = verifyResponse.data;
 
       if (verifyRes.success) {
-        const userResponse = await axios.post('https://raulocoin.onrender.com/api/user-details', data);
+        const userResponse = await axios.post('https://raulocoin.onrender.com/api/auth0/balance', { email });
         const userRes = userResponse.data;
 
         if (userRes.success && userRes.user) {
@@ -44,7 +65,7 @@ const VerifyAccount = () => {
             name: userRes.user.name,
             username: userRes.user.username,
             balance: userRes.user.balance,
-            token: data.totpToken,
+            email: userRes.user.email,
           }));
           navigate('/account');
         } else {
@@ -127,6 +148,7 @@ const VerifyAccount = () => {
               fullWidth
               label="Alias"
               value={alias}
+              onChange={(e) => setAlias(e.target.value)}
               disabled
               required
             />
@@ -137,6 +159,7 @@ const VerifyAccount = () => {
               value={codigo}
               onChange={(e) => setCodigo(e.target.value)}
               required
+              autoFocus
             />
 
             <Button
@@ -154,8 +177,8 @@ const VerifyAccount = () => {
             </Button>
 
             <Box textAlign="center" sx={{ mt: 2 }}>
-              <MuiLink component={Link} to="/" underline="hover" color="#C62368">
-                Volver
+              <MuiLink component={Link} to="/regenerate-totp" underline="hover" color="#C62368">
+                Recuperar TOTP
               </MuiLink>
             </Box>
           </Box>

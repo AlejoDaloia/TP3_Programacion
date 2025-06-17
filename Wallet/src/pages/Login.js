@@ -1,22 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import '../pageStyles/Login.css';
 import {
   Box,
   Button,
   Typography,
-  CircularProgress,
+  Link,         // <-- cambio acá
   Paper,
   Snackbar,
   Alert,
 } from '@mui/material';
 import {
-    useAuth0,
+  useAuth0,
 } from '@auth0/auth0-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import axios from 'axios';
 
 const Login = () => {
-  const [loading] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -24,11 +23,12 @@ const Login = () => {
   });
 
   const navigate = useNavigate();
+
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  //Definicion de dependencias de Auth0
+  // Definición de dependencias de Auth0
   const { 
     isAuthenticated,
     user,
@@ -36,8 +36,9 @@ const Login = () => {
     getIdTokenClaims,
     loginWithRedirect,
   } = useAuth0();
+  const [authProcessed, setAuthProcessed] = useState(false);
 
-  //Llamada al endpoint de autenticación
+  // Llamada al endpoint de autenticación
   const auth0Authenticate = async (data) => {
     try {
       const res = await axios.post(`https://raulocoin.onrender.com/api/auth0/authenticate`, data)
@@ -48,19 +49,19 @@ const Login = () => {
     }
   };
 
-  //Funcion de login
+  // Función de login
   const handleLoginClick = () => {
     loginWithRedirect({
-    authorizationParams: {
-      prompt: 'login',
-    },
+      authorizationParams: {
+        prompt: 'login',
+      },
     });
   };
 
   useEffect(() => {
     const fetchTokens = async () => {
       try {
-        if (!isAuthenticated || !user) return;
+        if (!isAuthenticated || !user || authProcessed) return;
 
         const accessToken = await getAccessTokenSilently();
         const idTokenClaims = await getIdTokenClaims();
@@ -74,14 +75,23 @@ const Login = () => {
             exp: idTokenClaims.exp,
             email: user.email,
             name: user.name,
+            nickname: user.nickname,
+            given_name: user.given_name,
+            family_name: user.family_name
           },
           auth0_tokens: {
             access_token: accessToken,
             id_token: idTokenClaims.__raw,
+            token_type: 'Bearer',
+            expires_in: 3600,
+            scope: 'openid profile email'
           },
         };
 
         const res = await auth0Authenticate(data);
+        console.log("Respuesta backend auth:", res);
+
+
         if (!res) {
           setSnackbar({
             open: true,
@@ -92,6 +102,7 @@ const Login = () => {
         }
 
         localStorage.setItem('userData', JSON.stringify({
+          id: res.user.id,
           name: res.user.name,
           username: res.user.username,
           email: res.user.email,
@@ -102,7 +113,39 @@ const Login = () => {
           existingUser: res.existingUser
         }));
 
+        setAuthProcessed(true);
+
+      if (res.needsTotpSetup) {
+        if (!res.existingUser && res.totpSetup) {
+          // Usuario nuevo que necesita configurar TOTP
+          navigate('/totp', {
+            state: {
+              email: res.user.email,
+              username: res.user.username,
+              totpSetup: res.totpSetup
+            }
+          });
+        } else {
+          // Usuario existente que necesita verificación o usuario sin QR
+          navigate('/verify-account', {
+            state: {
+              email: res.user.email,
+              username: res.user.username
+            }
+          });
+        }
+      } else if (res.user.totpVerified && res.user.isVerified) {
+        // Usuario ya verificado y TOTP confirmado
         navigate('/account');
+      } else {
+        // Usuario sin TOTP que debe verificar cuenta
+        navigate('/verify-account', {
+          state: {
+            email: res.user.email,
+            username: res.user.username
+          }
+        });
+      }
       } catch (error) {
         console.error("Error en el login:", error);
         setSnackbar({
@@ -114,8 +157,7 @@ const Login = () => {
     };
 
     fetchTokens();
-  }, [isAuthenticated, navigate, getAccessTokenSilently, getIdTokenClaims, user]);
-
+  }, [isAuthenticated, user, authProcessed, getAccessTokenSilently, getIdTokenClaims, navigate]);
 
   return (
     <Box
@@ -181,7 +223,6 @@ const Login = () => {
           <Box component="form">
             <Box textAlign="center" sx={{ mt: 1 }}>
 
-              {/*Boton de login*/}
               <Button 
                 fullWidth
                 variant="contained"
@@ -196,19 +237,11 @@ const Login = () => {
                 Ingresar
               </Button>
 
-              {/*Boton de recuperación*/}
-              <Button
-               fullWidth
-                variant="contained"
-                sx={{
-                mt: 2,
-                bgcolor: '#C62368',
-                '&:hover': { bgcolor: '#A31C55' },
-                }}
-                disabled={loading}
-               >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 'Recuperar TOTP'}
-              </Button>
+              <Box textAlign="center" sx={{ mt: 2 }}>
+                <Link component={RouterLink} to="/regenerate-totp" underline="hover" color="#C62368">
+                  Recuperar TOTP
+                </Link>
+              </Box>
 
             </Box>
           </Box>

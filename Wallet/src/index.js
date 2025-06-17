@@ -12,7 +12,9 @@ root.render(
     <React.StrictMode>
         <Auth0Provider domain={domain}
             clientId={clientId}
-            authorizationParams={{redirect_uri: window.location.origin}} 
+            authorizationParams={{redirect_uri: window.location.origin}}
+            audience='https://raulocoin.onrender.com'
+            scope='openid profile email'
         >
             <App />
         </Auth0Provider>
