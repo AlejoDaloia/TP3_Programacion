@@ -9,6 +9,8 @@ import VerifyAccount from './pages/VerifyAccount';
 import Transfer from './pages/Transfer';
 import TransferProof from './pages/TransferProof';
 import RegenerateTotp from './pages/RegenerateTotp';
+import ProfileEdit from './pages/ProfileEdit';
+
 function App() {
   return (
     <ConfigProvider
@@ -31,6 +33,7 @@ function App() {
             <Route path="/transfer" element={<Transfer />} />
             <Route path="/transfer-proof" element={<TransferProof />} />
             <Route path="/regenerate-totp" element={<RegenerateTotp />} />
+            <Route path="/profile" element={<ProfileEdit />} />
           </Routes>
 
         </div>

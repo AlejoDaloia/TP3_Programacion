@@ -12,13 +12,15 @@ import {
 const Totp = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const totpSetup = location.state;
+  const { totpSetup, email, username } = location.state || {};
 
   const [openSnackbar, setOpenSnackbar] = React.useState(false);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(totpSetup.manualSetupCode);
-    setOpenSnackbar(true);
+    if (totpSetup?.manualSetupCode) {
+      navigator.clipboard.writeText(totpSetup.manualSetupCode);
+      setOpenSnackbar(true);
+    }
   };
 
   return (
@@ -82,49 +84,50 @@ const Totp = () => {
             Escanea este código QR con tu aplicación de autenticación
           </Typography>
 
-          <Box mt={2} mb={2}>
-            <img
-              src={totpSetup.qrCodeUrl}
-              alt="TOTP QR Code"
-              style={{ maxWidth: 250, borderRadius: 8 }}
-            />
-          </Box>
+          {totpSetup?.qrCodeUrl && (
+            <Box mt={2} mb={2}>
+              <img
+                src={totpSetup.qrCodeUrl}
+                alt="TOTP QR Code"
+                style={{ maxWidth: 250, borderRadius: 8 }}
+              />
+            </Box>
+          )}
 
-          <Typography
-            variant="body2"
-            onClick={handleCopy}
+          {totpSetup?.manualSetupCode && (
+            <Typography
+              variant="body2"
+              onClick={handleCopy}
+              sx={{
+                cursor: 'pointer',
+                bgcolor: '#f5f5f5',
+                borderRadius: 2,
+                fontFamily: 'monospace',
+                px: 2,
+                py: 1,
+                textAlign: 'center',
+                '&:hover': { bgcolor: '#e0e0e0' }
+              }}
+            >
+              {totpSetup.manualSetupCode}
+            </Typography>
+          )}
+
+          <Button
+            variant="contained"
+            onClick={() =>
+              navigate('/verify-account', {
+                state: { email, username }
+              })
+            }
             sx={{
-              cursor: 'pointer',
-              bgcolor: '#f5f5f5',
-              borderRadius: 2,
-              fontFamily: 'monospace',
-              px: 2,
-              py: 1,
-              '&:hover': { bgcolor: '#e0e0e0' }
+              mt: 3,
+              bgcolor: '#C62368',
+              '&:hover': { bgcolor: '#A31C55' },
             }}
           >
-            {totpSetup.manualSetupCode}
-          </Typography>
-
-        <Button
-          variant="contained"
-          onClick={() =>
-            navigate('/verify-account', {
-              state: {
-                email: location.state?.email || '',
-                username: location.state?.username || ''
-              }
-            })
-          }
-          sx={{
-            mt: 3,
-            bgcolor: '#C62368',
-            '&:hover': { bgcolor: '#A31C55' },
-          }}
-        >
-          Ingresar
-        </Button>
-
+            Ingresar código TOTP
+          </Button>
         </Paper>
       </Box>
 

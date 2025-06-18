@@ -3,6 +3,7 @@ import {
   Box, Typography, IconButton, Button, CircularProgress, Paper,
 } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -42,6 +43,7 @@ const Account = () => {
   };
 
   const handleTransfer = () => navigate('/transfer');
+  const HandleProfile = () => navigate('/profile');
 
   const tipo = {
     sent: 'TRANSFERENCIA ENVIADA',
@@ -89,30 +91,66 @@ const Account = () => {
             borderRadius: 4,
             p: 5,
             display: 'flex',
-            flexDirection: 'column',
+            flexDirection: 'center',
             justifyContent: 'space-between',
+            alignItems: 'flex-start',
             boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
           }}
         >
-          <Box>
-            <Typography variant="subtitle1" color="#F26938">
-              Nombre
-            </Typography>
-            <Typography variant="h5" gutterBottom>
-              {userData.name}
-            </Typography>
-            <Typography variant="subtitle1" color="#F26938">
-              Alias
-            </Typography>
-            <Typography variant="h5">{userData.username}</Typography>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 10,
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+              }}
+            >
+              <Typography variant="subtitle1" color="#F26938">
+                Nombre
+              </Typography>
+              <Typography variant="h5" gutterBottom>
+                {userData.name}
+              </Typography>
+              <Typography variant="subtitle1" color="#F26938">
+                Alias
+              </Typography>
+              <Typography variant="h5">{userData.username}</Typography>
+            </Box>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+              }}
+            >
+              <Typography variant="subtitle1" color="#F26938">
+                Saldo disponible
+              </Typography>
+              <Typography variant="h3" fontWeight="bold">
+                R$ {userData.balance}
+              </Typography>
+            </Box>
           </Box>
           <Box>
-            <Typography variant="subtitle1" color="#F26938">
-              Saldo disponible
-            </Typography>
-            <Typography variant="h3" fontWeight="bold">
-              R$ {userData.balance}
-            </Typography>
+            <IconButton
+              onClick={HandleProfile}
+              sx={{
+                color: 'white',
+                backgroundColor: '#F26938',
+                '&:hover': { backgroundColor: '#D85A2B' },
+                p: 2,
+              }}
+              size="large"
+            >
+              <AccountCircleIcon />
+            </IconButton>
           </Box>
         </Paper>
       </Box>
@@ -132,7 +170,6 @@ const Account = () => {
             <LogoutIcon />
           </IconButton>
         </Box>
-
         <Button
           variant="contained"
           onClick={handleTransfer}
@@ -145,11 +182,9 @@ const Account = () => {
         >
           Transferir
         </Button>
-
         <Typography variant="h6" color="white">
           Últimos movimientos
         </Typography>
-
         <Box
           sx={{
             maxHeight: { xs: 300, md: 'calc(100vh - 180px)' },
@@ -188,6 +223,18 @@ const Account = () => {
             ))
           )}
         </Box>
+        <Button
+          variant="contained"
+          onClick={handleTransfer}
+          sx={{
+            bgcolor: '#032340',
+            '&:hover': { bgcolor: '#7e1833' },
+            color: 'white',
+            mb: 2,
+          }}
+        >
+          Ver más movimientos
+        </Button>
       </Box>
     </Box>
   );
