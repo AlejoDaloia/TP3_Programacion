@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import {
   Box, Typography, IconButton, Button, CircularProgress, Paper,
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem
 } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import jsPDF from 'jspdf';
 import { useAuth0 } from '@auth0/auth0-react';
 
 const Account = () => {
@@ -14,7 +16,18 @@ const Account = () => {
   const [userData] = useState(() => JSON.parse(localStorage.getItem('userData')));
   const [movimientos, setMovimientos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { logout } = useAuth0(); 
+  const [modalOpen, setModalOpen] = useState(false);
+  const [allMovimientos, setAllMovimientos] = useState([]);
+  const [filters, setFilters] = useState({
+    tipo: '',
+    desde: '',
+    hasta: '',
+    alias: '',
+  });
+  const [comprobante, setComprobante] = useState(null);
+  const [comprobanteOpen, setComprobanteOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const { logout } = useAuth0();
 
   useEffect(() => {
     const fetchMovimientos = async () => {
@@ -57,6 +70,109 @@ const Account = () => {
     .slice(0, 3);
 
   if (!userData) return null;
+
+  const handleOpenModal = async () => {
+    try {
+      const { email } = userData;
+      const res = await axios.post('https://raulocoin.onrender.com/api/auth0/transactions', {
+        email,
+      });
+      setAllMovimientos(res.data.transactions || []);
+      setModalOpen(true);
+    } catch (error) {
+      console.error('Error al cargar todas las transacciones:', error);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setFilters({ tipo: '', desde: '', hasta: '' });
+  };
+
+  const handleVerComprobante = (mov) => {
+    setComprobante(mov);
+    generarPDF(mov);
+    setComprobanteOpen(true);
+  };
+
+
+  const handleCloseComprobante = () => {
+    setComprobante(null);
+    setComprobanteOpen(false);
+  };
+
+  const tipoDescripcion = {
+    sent: 'Transferencia enviada',
+    received: 'Transferencia recibida',
+    award: 'Premio recibido',
+  };
+
+  const generarPDF = async (comprobante) => {
+  try {
+    const response = await fetch('/logo.jpg');
+    const blob = await response.blob();
+
+    const reader = new FileReader();
+    reader.readAsDataURL(blob);
+
+    reader.onloadend = () => {
+      const base64Logo = reader.result;
+
+      const doc = new jsPDF();
+
+      doc.setFontSize(20);
+      doc.setTextColor('#d4ac0d');
+      doc.text('RauloCoin', 105, 15, { align: 'center' });
+
+      // LOGO
+      const imageProps = doc.getImageProperties(base64Logo);
+      const pdfWidth = doc.internal.pageSize.getWidth();
+      const logoWidth = 40;
+      const ratio = imageProps.height / imageProps.width;
+      const logoHeight = logoWidth * ratio;
+      const x = (pdfWidth - logoWidth) / 2;
+      doc.addImage(base64Logo, 'JPG', x, 20, logoWidth, logoHeight);
+
+      const currentY = 20 + logoHeight + 10;
+      doc.setFontSize(16);
+      doc.setTextColor(0, 0, 0);
+      doc.text('Comprobante de Transferencia', 105, currentY, { align: 'center' });
+
+      // LINEA DIVISORIA
+      doc.setLineWidth(0.5);
+      doc.line(20, currentY + 5, 190, currentY + 5);
+
+      doc.setFontSize(12);
+      const datos = [
+        ['Enviado por:', comprobante.fromName || '-'],
+        ['Recibido por:', comprobante.toName || comprobante.awardedBy || '-'],
+        ['Monto:', `${comprobante.amount} R$`],
+        ['Descripción:', comprobante.description],
+        ['Fecha:', new Date(comprobante.createdAt * 1000).toLocaleString()],
+        ['Tipo:', tipoDescripcion[comprobante.type] || comprobante.type],
+      ];
+
+      let y = currentY + 15;
+      datos.forEach(([label, value], index) => {
+        doc.text(label, 20, y);
+        doc.text(value, 80, y);
+        y += 10;
+
+        // LINEAS DIVISORIAS DE DATOS
+        if (index < datos.length - 1) {
+          doc.setDrawColor(200);
+          doc.line(20, y - 5, 190, y - 5);
+        }
+      });
+
+      const finalBlob = doc.output('blob');
+      const finalUrl = URL.createObjectURL(finalBlob);
+      setPdfUrl(finalUrl);
+    };
+  } catch (error) {
+    console.error('Error generando PDF:', error);
+  }
+};
 
   return (
     <Box
@@ -233,7 +349,7 @@ const Account = () => {
         </Box>
         <Button
           variant="contained"
-          onClick={handleTransfer}
+          onClick={handleOpenModal}
           sx={{
             bgcolor: '#032340',
             '&:hover': { bgcolor: '#7e1833' },
@@ -244,8 +360,152 @@ const Account = () => {
           Ver más movimientos
         </Button>
       </Box>
+
+      {/* MODAL PARA VER TODOS LOS MOVIMIENTOS */}
+      <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="md" fullWidth>
+        <DialogTitle>Historial de movimientos</DialogTitle>
+        {/* FILTROS */}
+        <DialogContent dividers>
+          <Box display="flex" gap={2} mb={2}>
+
+            <TextField
+              label="Desde"
+              type="date"
+              InputLabelProps={{ shrink: true }}
+              value={filters.desde}
+              onChange={(e) => setFilters({ ...filters, desde: e.target.value })}
+              fullWidth
+            />
+
+            <TextField
+              label="Hasta"
+              type="date"
+              InputLabelProps={{ shrink: true }}
+              value={filters.hasta}
+              onChange={(e) => setFilters({ ...filters, hasta: e.target.value })}
+              fullWidth
+            />
+
+            <TextField
+              select
+              label="Tipo"
+              value={filters.tipo}
+              onChange={(e) => setFilters({ ...filters, tipo: e.target.value })}
+              fullWidth
+              Select
+            >
+              <MenuItem value="">Todos</MenuItem>
+              <MenuItem value="sent">Enviados</MenuItem>
+              <MenuItem value="received">Recibidos</MenuItem>
+              <MenuItem value="award">Premios</MenuItem>
+
+            </TextField>
+
+            <TextField
+              label="Alias"
+              placeholder="Ingresá alias"
+              value={filters.alias}
+              onChange={(e) => setFilters({ ...filters, alias: e.target.value })}
+              fullWidth
+            />
+
+          </Box>
+
+          <Box display="flex" flexDirection="column" gap={2}>
+            {allMovimientos
+              .filter((mov) => {
+                const fecha = new Date(mov.createdAt * 1000);
+                const desde = filters.desde ? new Date(filters.desde) : null;
+                const hasta = filters.hasta ? new Date(filters.hasta) : null;
+                const tipoOk = filters.tipo ? mov.type === filters.tipo : true;
+                const fechaOk =
+                  (!desde || fecha >= desde) && (!hasta || fecha <= hasta);
+                const alias = (filters.alias || '').toLowerCase();
+                const aliasOk =
+                  !alias ||
+                  (mov.fromUsername && mov.fromUsername.toLowerCase().includes(alias)) ||
+                  (mov.toUsername && mov.toUsername.toLowerCase().includes(alias)) ||
+                  (mov.awardedByUsername && mov.awardedByUsername.toLowerCase().includes(alias));
+
+                return tipoOk && fechaOk && aliasOk;
+              })
+              .map((mov, i) => (
+                <Paper key={i} elevation={2} sx={{ p: 2 }}>
+                  <Typography fontWeight="bold">{tipo[mov.type] || mov.type}</Typography>
+                  <Typography color={mov.amount >= 0 ? 'green' : 'red'}>
+                    {mov.amount >= 0 ? '+' : ''}{mov.amount} R$
+                  </Typography>
+                  <Typography>{mov.description}</Typography>
+                  {mov.type === 'sent' && <Typography>Enviado a: {mov.toName}</Typography>}
+                  {mov.type === 'received' && <Typography>Recibido de: {mov.fromName}</Typography>}
+                  {mov.type === 'award' && <Typography>Recibido de: {mov.awardedBy || 'Sistema'}</Typography>}
+                  <Typography fontSize={12} color="gray">
+                    Fecha: {new Date(mov.createdAt * 1000).toLocaleString()}
+                  </Typography>
+                  {/* BOTÓN DE VER COMPROBANTE */}
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    sx={{ mt: 1 }}
+                    onClick={() => handleVerComprobante(mov)}
+                  >
+                    Ver comprobante
+                  </Button>
+
+
+                </Paper>
+              ))}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseModal} sx={{ color: '#032340' }}>
+            Volver
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* MODAL PARA COMPROBANTE */}
+      <Dialog open={comprobanteOpen} onClose={handleCloseComprobante}>
+        <DialogTitle>Comprobante de transferencia</DialogTitle>
+        <DialogContent dividers>
+          {pdfUrl ? (
+            <Box>
+              <iframe
+                title="Comprobante PDF"
+                src={pdfUrl}
+                width="100%"
+                height="400px"
+                style={{ border: 'none' }}
+              />
+            </Box>
+          ) : (
+            <Typography>Cargando comprobante...</Typography>
+          )}
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            variant="contained"
+            onClick={() => {
+              const link = document.createElement('a');
+              link.href = pdfUrl;
+              link.download = `comprobante_${comprobante.id || 'transferencia'}.pdf`;
+              link.click();
+            }}
+            disabled={!pdfUrl}
+          >
+            Descargar PDF
+          </Button>
+
+          <Button onClick={handleCloseComprobante}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
     </Box>
   );
+
 };
+
+
 
 export default Account;
