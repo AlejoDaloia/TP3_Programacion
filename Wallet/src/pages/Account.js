@@ -121,7 +121,15 @@ const Account = () => {
               <Typography variant="subtitle1" color="#F26938">
                 Alias
               </Typography>
-              <Typography variant="h5">{userData.username}</Typography>
+              <Typography variant="h5" gutterBottom>
+                {userData.username}
+              </Typography>
+              <Typography variant="subtitle1" color="#F26938">
+                Email
+              </Typography>
+              <Typography variant="body1" sx={{ wordBreak: 'break-all' }}>
+                {userData.email}
+              </Typography>
             </Box>
             <Box
               sx={{
