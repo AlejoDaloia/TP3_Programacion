@@ -102,77 +102,74 @@ const Account = () => {
   };
 
   const tipoDescripcion = {
-    sent: 'Transferencia enviada',
-    received: 'Transferencia recibida',
-    award: 'Premio recibido',
+    sent: 'Transferencia Enviada',
+    received: 'Transferencia Recibida',
+    award: 'Premio Recibido',
   };
 
   const generarPDF = async (comprobante) => {
-  try {
-    const response = await fetch('/logo.jpg');
-    const blob = await response.blob();
+    try {
+      const response = await fetch('/logo.jpg');
+      const blob = await response.blob();
 
-    const reader = new FileReader();
-    reader.readAsDataURL(blob);
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
 
-    reader.onloadend = () => {
-      const base64Logo = reader.result;
+      reader.onloadend = () => {
+        const base64Logo = reader.result;
 
-      const doc = new jsPDF();
+        const doc = new jsPDF();
 
-      doc.setFontSize(20);
-      doc.setTextColor('#d4ac0d');
-      doc.text('RauloCoin', 105, 15, { align: 'center' });
+        doc.setFontSize(20);
+        doc.setTextColor('#d4ac0d');
+        doc.text('RauloCoin', 105, 15, { align: 'center' });
 
-      // LOGO
-      const imageProps = doc.getImageProperties(base64Logo);
-      const pdfWidth = doc.internal.pageSize.getWidth();
-      const logoWidth = 40;
-      const ratio = imageProps.height / imageProps.width;
-      const logoHeight = logoWidth * ratio;
-      const x = (pdfWidth - logoWidth) / 2;
-      doc.addImage(base64Logo, 'JPG', x, 20, logoWidth, logoHeight);
+        const imageProps = doc.getImageProperties(base64Logo);
+        const pdfWidth = doc.internal.pageSize.getWidth();
+        const logoWidth = 40;
+        const ratio = imageProps.height / imageProps.width;
+        const logoHeight = logoWidth * ratio;
+        const x = (pdfWidth - logoWidth) / 2;
+        doc.addImage(base64Logo, 'JPG', x, 20, logoWidth, logoHeight);
 
-      const currentY = 20 + logoHeight + 10;
-      doc.setFontSize(16);
-      doc.setTextColor(0, 0, 0);
-      doc.text('Comprobante de Transferencia', 105, currentY, { align: 'center' });
+        const currentY = 20 + logoHeight + 10;
+        doc.setFontSize(16);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Comprobante de Transferencia', 105, currentY, { align: 'center' });
 
-      // LINEA DIVISORIA
-      doc.setLineWidth(0.5);
-      doc.line(20, currentY + 5, 190, currentY + 5);
+        doc.setLineWidth(0.5);
+        doc.line(20, currentY + 5, 190, currentY + 5);
 
-      doc.setFontSize(12);
-      const datos = [
-        ['Enviado por:', comprobante.fromName || '-'],
-        ['Recibido por:', comprobante.toName || comprobante.awardedBy || '-'],
-        ['Monto:', `${comprobante.amount} R$`],
-        ['Descripción:', comprobante.description],
-        ['Fecha:', new Date(comprobante.createdAt * 1000).toLocaleString()],
-        ['Tipo:', tipoDescripcion[comprobante.type] || comprobante.type],
-      ];
+        doc.setFontSize(12);
+        const datos = [
+          ['Enviado por:', comprobante.fromName || '-'],
+          ['Recibido por:', comprobante.toName || comprobante.awardedBy || '-'],
+          ['Monto:', `${Math.abs(comprobante.amount)} R$`],
+          ['Descripción:', comprobante.description],
+          ['Fecha:', new Date(comprobante.createdAt * 1000).toLocaleString()],
+          ['Tipo:', tipoDescripcion[comprobante.type] || comprobante.type],
+        ];
 
-      let y = currentY + 15;
-      datos.forEach(([label, value], index) => {
-        doc.text(label, 20, y);
-        doc.text(value, 80, y);
-        y += 10;
+        let y = currentY + 15;
+        datos.forEach(([label, value], index) => {
+          doc.text(label, 20, y);
+          doc.text(value, 80, y);
+          y += 10;
 
-        // LINEAS DIVISORIAS DE DATOS
-        if (index < datos.length - 1) {
-          doc.setDrawColor(200);
-          doc.line(20, y - 5, 190, y - 5);
-        }
-      });
+          if (index < datos.length - 1) {
+            doc.setDrawColor(200);
+            doc.line(20, y - 5, 190, y - 5);
+          }
+        });
 
-      const finalBlob = doc.output('blob');
-      const finalUrl = URL.createObjectURL(finalBlob);
-      setPdfUrl(finalUrl);
-    };
-  } catch (error) {
-    console.error('Error generando PDF:', error);
-  }
-};
+        const finalBlob = doc.output('blob');
+        const finalUrl = URL.createObjectURL(finalBlob);
+        setPdfUrl(finalUrl);
+      };
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+    }
+  };
 
   return (
     <Box
@@ -352,17 +349,15 @@ const Account = () => {
             mb: 2,
           }}
         >
-          Ver más movimientos
+          VER MÁS MOVIMIENTOS
         </Button>
       </Box>
 
-      {/* MODAL PARA VER TODOS LOS MOVIMIENTOS */}
       <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="md" fullWidth>
         <DialogTitle>Historial de movimientos</DialogTitle>
         {/* FILTROS */}
         <DialogContent dividers>
           <Box display="flex" gap={2} mb={2}>
-
             <TextField
               label="Desde"
               type="date"
@@ -403,7 +398,6 @@ const Account = () => {
               onChange={(e) => setFilters({ ...filters, alias: e.target.value })}
               fullWidth
             />
-
           </Box>
 
           <Box display="flex" flexDirection="column" gap={2}>
@@ -425,43 +419,75 @@ const Account = () => {
                 return tipoOk && fechaOk && aliasOk;
               })
               .map((mov, i) => (
-                <Paper key={i} elevation={2} sx={{ p: 2 }}>
-                  <Typography fontWeight="bold">{tipo[mov.type] || mov.type}</Typography>
-                  <Typography color={mov.amount >= 0 ? 'green' : 'red'}>
-                    {mov.amount >= 0 ? '+' : ''}{mov.amount} R$
-                  </Typography>
-                  <Typography>{mov.description}</Typography>
-                  {mov.type === 'sent' && <Typography>Enviado a: {mov.toName}</Typography>}
-                  {mov.type === 'received' && <Typography>Recibido de: {mov.fromName}</Typography>}
-                  {mov.type === 'award' && <Typography>Recibido de: {mov.awardedBy || 'Sistema'}</Typography>}
-                  <Typography fontSize={12} color="gray">
-                    Fecha: {new Date(mov.createdAt * 1000).toLocaleString()}
-                  </Typography>
-                  {/* BOTÓN DE VER COMPROBANTE */}
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    sx={{ mt: 1 }}
-                    onClick={() => handleVerComprobante(mov)}
-                  >
-                    Ver comprobante
-                  </Button>
+                <Paper
+                  key={i}
+                  elevation={2}
+                  sx={{
+                    p: 2,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    borderLeft: '12px solid',
+                    borderLeftColor:
+                      mov.type === 'sent' ? '#C62828' : mov.type === 'received' || mov.type === 'award' ? '#2E7D32' : 'gray',
+                    borderRadius: 2,
+                    bgcolor: '#f5f5f5',
+                  }}
+                >
+                  <Box>
+                    <Typography fontWeight="bold" color="#121212">
+                      {tipo[mov.type] || mov.type}
+                    </Typography>
 
+                    <Typography
+                      sx={{ fontWeight: 600 }}
+                      color={mov.amount >= 0 ? 'green' : 'red'}
+                    >
+                      {mov.amount >= 0 ? `+${mov.amount}` : `${Math.abs(mov.amount)}`} R$
+                    </Typography>
 
+                    <Typography>{mov.description}</Typography>
+
+                    {mov.type === 'sent' && <Typography>Enviado a: {mov.toName}</Typography>}
+                    {mov.type === 'received' && <Typography>Recibido de: {mov.fromName}</Typography>}
+                    {mov.type === 'award' && <Typography>Recibido de: {mov.awardedBy || 'Sistema'}</Typography>}
+
+                    <Typography fontSize={12} color="#3b3b3b">
+                      Fecha: {new Date(mov.createdAt * 1000).toLocaleString()}
+                    </Typography>
+                  </Box>
+
+                  {/* BOTÓN VER COMPROBANTEE */}
+                  <Box sx={{ ml: 2 }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => handleVerComprobante(mov)}
+                      sx={{
+                        borderColor: '#34495e',
+                        color: '#34495e',
+                        '&:hover': {
+                          borderColor: '#C62828',
+                          color: '#C62828',
+                        },
+                      }}
+                    >
+                      VER COMPROBANTE
+                    </Button>
+                  </Box>
                 </Paper>
               ))}
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseModal} sx={{ color: '#032340' }}>
-            Volver
+            CERRAR
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* MODAL PARA COMPROBANTE */}
       <Dialog open={comprobanteOpen} onClose={handleCloseComprobante}>
-        <DialogTitle>Comprobante de transferencia</DialogTitle>
+        <DialogTitle>Comprobante de Transferencia</DialogTitle>
         <DialogContent dividers>
           {pdfUrl ? (
             <Box>

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import {
   Box, Button, TextField, Typography, Autocomplete,
-  CircularProgress, Snackbar, Alert, Paper, Divider
+  CircularProgress, Snackbar, Alert, Paper, Divider,
+  Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import axios from 'axios';
+import jsPDF from 'jspdf';
 
 const Transfer = () => {
   const navigate = useNavigate();
@@ -16,11 +18,80 @@ const Transfer = () => {
   const [sugerencias, setSugerencias] = useState([]);
   const [loading, setLoading] = useState(false);
   const [alerta, setAlerta] = useState({ open: false, message: '', severity: 'info' });
+  const [comprobante, setComprobante] = useState(null);
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const [comprobanteVisible, setComprobanteVisible] = useState(false);
 
   const userData = JSON.parse(localStorage.getItem('userData'));
 
   const handleSnackbar = (message, severity = 'info') => {
     setAlerta({ open: true, message, severity });
+  };
+  const tipoDescripcion = {
+    sent: 'Transferencia Enviada',
+    received: 'Transferencia Recibida',
+    award: 'Premio Recibido',
+  };
+
+  const generarPDF = async (comprobante) => {
+    try {
+      const response = await fetch('/logo.jpg');
+      const blob = await response.blob();
+
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+
+      reader.onloadend = () => {
+        const base64Logo = reader.result;
+        const doc = new jsPDF();
+
+        doc.setFontSize(20);
+        doc.setTextColor('#d4ac0d');
+        doc.text('RauloCoin', 105, 15, { align: 'center' });
+
+        const imageProps = doc.getImageProperties(base64Logo);
+        const pdfWidth = doc.internal.pageSize.getWidth();
+        const logoWidth = 40;
+        const ratio = imageProps.height / imageProps.width;
+        const logoHeight = logoWidth * ratio;
+        const x = (pdfWidth - logoWidth) / 2;
+        doc.addImage(base64Logo, 'JPG', x, 20, logoWidth, logoHeight);
+
+        const currentY = 20 + logoHeight + 10;
+        doc.setFontSize(16);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Comprobante de Transferencia', 105, currentY, { align: 'center' });
+
+        doc.setLineWidth(0.5);
+        doc.line(20, currentY + 5, 190, currentY + 5);
+
+        doc.setFontSize(12);
+        const datos = [
+          ['Enviado por:', comprobante.fromName || '-'],
+          ['Recibido por:', comprobante.toName || comprobante.awardedBy || '-'],
+          ['Monto:', `${comprobante.amount} R$`],
+          ['Descripción:', comprobante.description],
+          ['Fecha:', new Date(comprobante.createdAt * 1000).toLocaleString()],
+          ['Tipo:', tipoDescripcion[comprobante.type] || comprobante.type],
+        ];
+
+        let y = currentY + 15;
+        datos.forEach(([label, value], index) => {
+          doc.text(label, 20, y);
+          doc.text(value, 80, y);
+          y += 10;
+          if (index < datos.length - 1) {
+            doc.setDrawColor(200);
+            doc.line(20, y - 5, 190, y - 5);
+          }
+        });
+        const blob = doc.output('blob');
+        const url = URL.createObjectURL(blob);
+        setPdfUrl(url);
+      };
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+    }
   };
 
   const buscarUsuarios = async (texto) => {
@@ -60,14 +131,18 @@ const Transfer = () => {
       if (transferRes.data.success) {
         userData.balance = transferRes.data.transfer.from.newBalance;
         localStorage.setItem('userData', JSON.stringify(userData));
-        navigate('/transfer-proof', {
-          state: {
-            from: userData.username,
-            to: alias,
-            amount: cantidad,
-            date: new Date().toISOString(),
-          }
-        });
+
+        const comprobanteGenerado = {
+          fromName: userData.name,
+          toName: transferRes.data.transfer.to.name || alias,
+          amount: cantidad,
+          description: detalle,
+          createdAt: Math.floor(Date.now() / 1000),
+          type: 'sent',
+        };
+        setComprobante(comprobanteGenerado);
+        generarPDF(comprobanteGenerado);
+        setComprobanteVisible(true);
       } else {
         handleSnackbar(transferRes.data.message || 'Error en la transferencia.', 'error');
       }
@@ -212,6 +287,40 @@ const Transfer = () => {
           </Snackbar>
         </Paper>
       </motion.div>
+      <Dialog open={comprobanteVisible} onClose={() => setComprobanteVisible(false)}>
+        <DialogTitle>Comprobante de transferencia</DialogTitle>
+        <DialogContent dividers>
+          {pdfUrl ? (
+            <Box>
+              <iframe
+                title="Comprobante PDF"
+                src={pdfUrl}
+                width="100%"
+                height="400px"
+                style={{ border: 'none' }}
+              />
+            </Box>
+          ) : (
+            <Typography>Cargando comprobante...</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            variant="contained"
+            onClick={() => {
+              const link = document.createElement('a');
+              link.href = pdfUrl;
+              link.download = `comprobante_transferencia.pdf`;
+              link.click();
+            }}
+            disabled={!pdfUrl}
+          >
+            Descargar PDF
+          </Button>
+          <Button onClick={() => setComprobanteVisible(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
     </Box>
   );
 };
