@@ -184,7 +184,7 @@ const VerifyAccount = () => {
                 underline="hover"
                 color="#C62368"
               >
-                Recuperar TOTP
+                Ya no tengo mi codigo TOTP
               </MuiLink>
             </Box>
           </Box>

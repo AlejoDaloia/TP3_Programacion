@@ -256,7 +256,7 @@ const Login = () => {
                   underline="hover"
                   color="#C62368"
                 >
-                  Recuperar TOTP
+                  Ya no tengo mi codigo TOTP
                 </Link>
               </Box>
             </Box>

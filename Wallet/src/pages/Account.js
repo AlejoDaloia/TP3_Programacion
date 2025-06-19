@@ -18,6 +18,7 @@ const Account = () => {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [allMovimientos, setAllMovimientos] = useState([]);
+  const [loadingAllMovimientos, setLoadingAllMovimientos] = useState(false);
   const [filters, setFilters] = useState({
     tipo: '',
     desde: '',
@@ -73,6 +74,7 @@ const Account = () => {
 
   const handleOpenModal = async () => {
     try {
+      setLoadingAllMovimientos(true);
       const { email } = userData;
       const res = await axios.post('https://raulocoin.onrender.com/api/auth0/transactions', {
         email,
@@ -81,8 +83,11 @@ const Account = () => {
       setModalOpen(true);
     } catch (error) {
       console.error('Error al cargar todas las transacciones:', error);
+    } finally {
+      setLoadingAllMovimientos(false);
     }
   };
+
 
   const handleCloseModal = () => {
     setModalOpen(false);
@@ -347,12 +352,17 @@ const Account = () => {
             '&:hover': { bgcolor: '#7e1833' },
             color: 'white',
             mb: 2,
+            minWidth: 200,
           }}
+          disabled={loadingAllMovimientos}
         >
-          VER MÁS MOVIMIENTOS
+          {loadingAllMovimientos ? (
+            <CircularProgress size={24} sx={{ color: 'white' }} />
+          ) : (
+            'VER MÁS MOVIMIENTOS'
+          )}
         </Button>
       </Box>
-
       <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="md" fullWidth>
         <DialogTitle>Historial de movimientos</DialogTitle>
         {/* FILTROS */}
@@ -403,6 +413,7 @@ const Account = () => {
           <Box display="flex" flexDirection="column" gap={2}>
             {allMovimientos
               .filter((mov) => {
+                if (!['sent', 'received', 'award'].includes(mov.type)) return false;
                 const fecha = new Date(mov.createdAt * 1000);
                 const desde = filters.desde ? new Date(filters.desde) : null;
                 const hasta = filters.hasta ? new Date(filters.hasta) : null;
