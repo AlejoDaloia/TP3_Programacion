@@ -9,16 +9,18 @@ import {
   Snackbar,
   Alert,
 } from '@mui/material';
-import {  useNavigate } from 'react-router-dom';
+import {  useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 
 const RegenerateTotp = () => {
   const navigate = useNavigate();
-  const [alias, setAlias] = useState('');
-  const [email, setEmail] = useState('');
+  const location = useLocation();
+  const [alias, setAlias] = useState(location.state?.username || '');
+  const [email, setEmail] = useState(location.state?.email || '');
   const [totpSetup, setTotpSetup] = useState(null);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const { from } = location.state || 'login';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -179,18 +181,21 @@ const RegenerateTotp = () => {
               >
                 {totpSetup.manualSetupCode}
               </Typography>
-
-            <Button
-              variant="contained"
-              onClick={() => navigate('/verify-account', { state: { email, username: alias } })}
-              sx={{
-                mt: 3,
-                bgcolor: '#C62368',
-                '&:hover': { bgcolor: '#A31C55' },
-              }}
-            >
-              Volver
-            </Button>
+              <Button
+                variant="contained"
+                onClick={() =>
+                  navigate(from === 'verify-account' ? '/verify-account' : '/', {
+                    state: { email, username: alias }
+                  })
+                }
+                sx={{
+                  mt: 3,
+                  bgcolor: '#C62368',
+                  '&:hover': { bgcolor: '#A31C55' },
+                }}
+              >
+                Volver
+              </Button>
             </>
           )}
         </Paper>

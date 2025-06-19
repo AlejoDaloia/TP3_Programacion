@@ -265,12 +265,7 @@ const Account = () => {
           <Box>
             <IconButton
               onClick={HandleProfile}
-              sx={{
-                color: 'white',
-                backgroundColor: '#F26938',
-                '&:hover': { backgroundColor: '#D85A2B' },
-                p: 2,
-              }}
+              sx={{ color: 'white', backgroundColor: '#F26938', '&:hover': { backgroundColor: '#D85A2B' }, p: 2 }}
               size="large"
             >
               <AccountCircleIcon />
@@ -505,7 +500,5 @@ const Account = () => {
   );
 
 };
-
-
 
 export default Account;

@@ -177,7 +177,13 @@ const VerifyAccount = () => {
             </Button>
 
             <Box textAlign="center" sx={{ mt: 2 }}>
-              <MuiLink component={Link} to="/regenerate-totp" underline="hover" color="#C62368">
+              <MuiLink
+                component={Link}
+                to="/regenerate-totp"
+                state={{ from: 'verify-account', email, username: alias }}
+                underline="hover"
+                color="#C62368"
+              >
                 Recuperar TOTP
               </MuiLink>
             </Box>

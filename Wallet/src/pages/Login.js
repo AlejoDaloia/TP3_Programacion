@@ -248,13 +248,17 @@ const Login = () => {
               >
                 Ingresar
               </Button>
-
               <Box textAlign="center" sx={{ mt: 2 }}>
-                <Link component={RouterLink} to="/regenerate-totp" underline="hover" color="#C62368">
+                <Link
+                  component={RouterLink}
+                  to="/regenerate-totp"
+                  state={{ from: 'login' }}
+                  underline="hover"
+                  color="#C62368"
+                >
                   Recuperar TOTP
                 </Link>
               </Box>
-
             </Box>
           </Box>
         </Paper>
